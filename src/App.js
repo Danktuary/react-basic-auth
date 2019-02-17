@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 
 import './App.css';
+import http from './http.js';
 import Home from './views/Home.js';
 import NavBar from './views/partials/NavBar.js';
 
@@ -12,17 +13,23 @@ class App extends Component {
 		};
 	}
 
-	login = (data = {}) => {
+	login = async ({ username, password } = {}) => {
 		const { user } = this.state;
-		if (user && user.name) return console.log('You\'re already logged in.');
+		if (user && user.id) return console.log('You\'re already logged in.');
 
-		localStorage.setItem('react-user', JSON.stringify(data));
-		this.setState({ user: data });
+		try {
+			const { data } = await http.post('/login', { username, password });
+
+			this.setState({ user: data.user });
+			http.setAuthHeader(data.user.token);
+			localStorage.setItem('react-user', JSON.stringify(data.user));
+		} catch (error) {
+			console.error(error);
+		}
 	}
 
 	logout = () => {
-		const { user } = this.state;
-		if (!user.name) return console.log('You\'re not logged in.');
+		if (!this.state.user.id) return console.log('You\'re not logged in.');
 
 		localStorage.removeItem('react-user');
 		this.setState({ user: {} });
@@ -32,10 +39,10 @@ class App extends Component {
 		return (
 			<div>
 				<header className="wrapper">
-					<NavBar login={this.login} logout={this.logout} />
+					<NavBar logout={this.logout} />
 				</header>
 				<main>
-					<Home user={this.state.user} />
+					<Home login={this.login} user={this.state.user} />
 				</main>
 			</div>
 		);
